@@ -1,0 +1,64 @@
+#!/bin/zsh
+# Generates a random password, prints it, and copies it to the clipboard.
+
+SPECIALS='!@#$%^&*()_+=,.:;?~-'
+
+show_help() {
+  cat <<HELP
+Usage: randpass [options] [length]
+
+Generates a random password, prints it, and copies it to the clipboard.
+
+Arguments:
+  length           Number of characters (default: 32, no upper limit)
+
+Options:
+  -s, --special    Include special characters: $SPECIALS
+                   The password always contains at least one.
+  -h, --help       Show this help
+
+Examples:
+  randpass             32 characters, letters and digits
+  randpass 64          64 characters, letters and digits
+  randpass -s          32 characters with special characters
+  randpass -s 20       20 characters with special characters
+HELP
+}
+
+use_specials=false
+len=32
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -s|--special)
+      use_specials=true
+      ;;
+    *)
+      if ! [[ "$arg" =~ ^[0-9]+$ ]] || (( arg < 1 )); then
+        echo "Unknown argument: $arg" >&2
+        echo "See: randpass --help" >&2
+        exit 1
+      fi
+      len="$arg"
+      ;;
+  esac
+done
+
+if [[ "$use_specials" == true ]]; then
+  # Regenerate until at least one special character is included.
+  while true; do
+    pass=$(LC_ALL=C tr -dc "A-Za-z0-9${SPECIALS}" < /dev/urandom | head -c "$len")
+    if [[ "$pass" == *[${SPECIALS}]* ]]; then
+      break
+    fi
+  done
+else
+  pass=$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$len")
+fi
+
+printf '%s\n' "$pass"
+printf '%s' "$pass" | pbcopy
